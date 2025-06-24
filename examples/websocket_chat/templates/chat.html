@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prologue WebSocket Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 5px 0 0 5px;
+            display: flex;
+            flex-direction: column;
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+            border-radius: 0 5px 5px 0;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .chat-header {
+            padding: 15px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 0 5px 0 0;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-input {
+            padding: 15px;
+            border-top: 1px solid #eee;
+            display: flex;
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .chat-input button {
+            padding: 10px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .chat-input button:hover {
+            background-color: #2980b9;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            max-width: 80%;
+        }
+        .message.user {
+            align-self: flex-end;
+            background-color: #3498db;
+            color: white;
+        }
+        .message.other {
+            align-self: flex-start;
+            background-color: #eee;
+        }
+        .message.system {
+            align-self: center;
+            background-color: #f8f9fa;
+            color: #6c757d;
+            font-style: italic;
+            font-size: 0.9em;
+        }
+        .message .username {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .message .timestamp {
+            font-size: 0.8em;
+            color: #888;
+            text-align: right;
+            margin-top: 5px;
+        }
+        .room-list {
+            margin-top: 20px;
+            flex: 1;
+        }
+        .room {
+            padding: 10px;
+            margin-bottom: 5px;
+            background-color: #34495e;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .room:hover, .room.active {
+            background-color: #3498db;
+        }
+        .room .room-name {
+            font-weight: bold;
+        }
+        .room .user-count {
+            font-size: 0.8em;
+            color: #bdc3c7;
+        }
+        .login-form {
+            margin-bottom: 20px;
+        }
+        .login-form input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #34495e;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .login-form button {
+            width: 100%;
+            padding: 10px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .login-form button:hover {
+            background-color: #2980b9;
+        }
+        .create-room {
+            margin-top: auto;
+            padding: 10px;
+        }
+        .create-room input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #34495e;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>Prologue Chat</h2>
+            
+            <div class="login-form" id="loginForm">
+                <input type="text" id="username" placeholder="Ваше имя" required>
+                <input type="text" id="roomInput" placeholder="Комната (по умолчанию: general)" value="general">
+                <button id="joinBtn">Присоединиться</button>
+            </div>
+            
+            <div class="room-list" id="roomList">
+                <h3>Комнаты</h3>
+                <!-- Список комнат будет добавлен динамически -->
+            </div>
+            
+            <div class="create-room">
+                <input type="text" id="newRoomInput" placeholder="Создать новую комнату">
+                <button id="createRoomBtn">Создать</button>
+            </div>
+        </div>
+        
+        <div class="main">
+            <div class="chat-header" id="chatHeader">
+                <h2>Выберите комнату для начала общения</h2>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <!-- Сообщения будут добавлены динамически -->
+            </div>
+            
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="Введите сообщение..." disabled>
+                <button id="sendBtn" disabled>Отправить</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Элементы DOM
+        const loginForm = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
+        const roomInput = document.getElementById('roomInput');
+        const joinBtn = document.getElementById('joinBtn');
+        const roomList = document.getElementById('roomList');
+        const newRoomInput = document.getElementById('newRoomInput');
+        const createRoomBtn = document.getElementById('createRoomBtn');
+        const chatHeader = document.getElementById('chatHeader');
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        // Состояние приложения
+        let currentUser = '';
+        let currentRoom = '';
+        let socket = null;
+
+        // Загрузка списка комнат
+        function loadRooms() {
+            fetch('/api/rooms')
+                .then(response => response.json())
+                .then(rooms => {
+                    roomList.innerHTML = '<h3>Комнаты</h3>';
+                    rooms.forEach(room => {
+                        const roomElement = document.createElement('div');
+                        roomElement.className = 'room';
+                        if (room.name === currentRoom) {
+                            roomElement.classList.add('active');
+                        }
+                        roomElement.innerHTML = `
+                            <div class="room-name">${room.name}</div>
+                            <div class="user-count">${room.users} пользователей</div>
+                        `;
+                        roomElement.addEventListener('click', () => {
+                            if (currentUser && room.name !== currentRoom) {
+                                joinRoom(room.name);
+                            }
+                        });
+                        roomList.appendChild(roomElement);
+                    });
+                })
+                .catch(error => console.error('Ошибка загрузки комнат:', error));
+        }
+
+        // Присоединение к комнате
+        function joinRoom(roomName) {
+            // Закрываем предыдущее соединение, если оно существует
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
+            }
+
+            currentRoom = roomName;
+            chatHeader.innerHTML = `<h2>Комната: ${currentRoom}</h2>`;
+            chatMessages.innerHTML = '';
+            
+            // Создаем новое WebSocket соединение
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws?username=${encodeURIComponent(currentUser)}&room=${encodeURIComponent(currentRoom)}`;
+            
+            socket = new WebSocket(wsUrl);
+            
+            socket.onopen = function() {
+                console.log('WebSocket соединение установлено');
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                messageInput.focus();
+            };
+            
+            socket.onmessage = function(event) {
+                try {
+                    const message = JSON.parse(event.data);
+                    addMessage(message);
+                } catch (e) {
+                    // Если не JSON, добавляем как обычное сообщение
+                    addMessage({
+                        type: 'system',
+                        content: event.data,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            };
+            
+            socket.onclose = function() {
+                console.log('WebSocket соединение закрыто');
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+            };
+            
+            socket.onerror = function(error) {
+                console.error('WebSocket ошибка:', error);
+                addMessage({
+                    type: 'system',
+                    content: 'Ошибка соединения. Пожалуйста, попробуйте позже.',
+                    timestamp: new Date().toISOString()
+                });
+            };
+            
+            // Обновляем список комнат
+            loadRooms();
+        }
+
+        // Добавление сообщения в чат
+        function addMessage(message) {
+            const messageElement = document.createElement('div');
+            
+            if (message.type === 'system') {
+                messageElement.className = 'message system';
+                messageElement.innerHTML = `
+                    <div class="content">${message.content}</div>
+                    <div class="timestamp">${formatTimestamp(message.timestamp)}</div>
+                `;
+            } else {
+                if (message.username === currentUser) {
+                    messageElement.className = 'message user';
+                } else {
+                    messageElement.className = 'message other';
+                }
+                
+                messageElement.innerHTML = `
+                    <div class="username">${message.username}</div>
+                    <div class="content">${message.content}</div>
+                    <div class="timestamp">${formatTimestamp(message.timestamp)}</div>
+                `;
+            }
+            
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Форматирование временной метки
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString();
+        }
+
+        // Обработчики событий
+        joinBtn.addEventListener('click', () => {
+            const username = usernameInput.value.trim();
+            const room = roomInput.value.trim() || 'general';
+            
+            if (username) {
+                currentUser = username;
+                joinRoom(room);
+            }
+        });
+
+        createRoomBtn.addEventListener('click', () => {
+            const newRoom = newRoomInput.value.trim();
+            
+            if (newRoom && currentUser) {
+                joinRoom(newRoom);
+                newRoomInput.value = '';
+            }
+        });
+
+        sendBtn.addEventListener('click', sendMessage);
+        
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        function sendMessage() {
+            const content = messageInput.value.trim();
+            
+            if (content && socket && socket.readyState === WebSocket.OPEN) {
+                const message = {
+                    type: 'text',
+                    content: content
+                };
+                
+                socket.send(JSON.stringify(message));
+                messageInput.value = '';
+                messageInput.focus();
+            }
+        }
+
+        // Загружаем список комнат при загрузке страницы
+        loadRooms();
+        
+        // Автоматически фокусируемся на поле имени пользователя
+        usernameInput.focus();
+    </script>
+</body>
+</html>
