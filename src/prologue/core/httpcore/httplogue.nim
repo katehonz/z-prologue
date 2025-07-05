@@ -6,9 +6,13 @@
 #    See the file "copying.txt", included in this
 #    distribution, for details about the copyright.
 #
-import std/[tables, httpcore, strutils]
+import std/[tables, httpcore, strutils, times, options]
+import ./keepalive
+import ./connectionpool
+import ./timeouts
+import ./optimizations
 
-export httpcore
+export httpcore, keepalive, connectionpool, timeouts, optimizations
 
 type
   ResponseHeaders* = object
@@ -102,5 +106,77 @@ func getOrDefault*(headers: ResponseHeaders, key: string,
   else:
     result = default
 
-func len*(headers: ResponseHeaders): int {.inline.} = 
+func len*(headers: ResponseHeaders): int {.inline.} =
   result = headers.table.len
+
+# Keep-Alive integration functions
+proc addKeepAliveSupport*(headers: var ResponseHeaders, timeout: int = 15, maxRequests: int = 100) =
+  ## Adds Keep-Alive headers to response
+  headers["Connection"] = "keep-alive"
+  headers["Keep-Alive"] = "timeout=" & $timeout & ", max=" & $maxRequests
+
+proc shouldUseKeepAlive*(headers: ResponseHeaders): bool =
+  ## Determines if Keep-Alive should be used based on request headers
+  let connection = headers.getOrDefault("connection", @[""]).join(",").toLowerAscii()
+  let httpVersion = headers.getOrDefault("http-version", @["1.1"]).join(",")
+  
+  # HTTP/1.1 defaults to keep-alive unless explicitly closed
+  if httpVersion == "1.1":
+    result = connection != "close"
+  else:
+    # HTTP/1.0 requires explicit keep-alive
+    result = connection.contains("keep-alive")
+
+proc optimizeHeaders*(headers: var ResponseHeaders, clientId: string = "") =
+  ## Optimizes headers based on current optimization settings
+  let optimizer = getGlobalHttpOptimizer()
+  if optimizer != nil and optimizer.enabled:
+    let requestTime = getTime()
+    let (timeout, useKeepAlive) = optimizeRequest(clientId, requestTime)
+    
+    if useKeepAlive:
+      addKeepAliveSupport(headers, timeout div 1000)  # Convert ms to seconds
+    else:
+      headers["Connection"] = "close"
+
+# Enhanced ResponseHeaders with optimization support
+type
+  OptimizedResponseHeaders* = object
+    headers*: ResponseHeaders
+    clientId*: string
+    optimized*: bool
+
+proc initOptimizedResponseHeaders*(clientId: string = ""): OptimizedResponseHeaders =
+  ## Creates optimized response headers
+  result = OptimizedResponseHeaders(
+    headers: initResponseHeaders(),
+    clientId: clientId,
+    optimized: false
+  )
+
+proc optimize*(headers: var OptimizedResponseHeaders) =
+  ## Applies optimizations to headers
+  if not headers.optimized:
+    optimizeHeaders(headers.headers, headers.clientId)
+    headers.optimized = true
+
+proc `[]`*(headers: OptimizedResponseHeaders, key: string): seq[string] {.inline.} =
+  result = headers.headers[key]
+
+proc `[]=`*(headers: var OptimizedResponseHeaders, key, value: string) {.inline.} =
+  headers.headers[key] = value
+  headers.optimized = false  # Mark as needing re-optimization
+
+proc add*(headers: var OptimizedResponseHeaders, key, value: string) {.inline.} =
+  headers.headers.add(key, value)
+  headers.optimized = false
+
+proc hasKey*(headers: OptimizedResponseHeaders, key: string): bool {.inline.} =
+  result = headers.headers.hasKey(key)
+
+iterator pairs*(headers: OptimizedResponseHeaders): tuple[key, value: string] =
+  for pair in headers.headers.pairs():
+    yield pair
+
+proc len*(headers: OptimizedResponseHeaders): int {.inline.} =
+  result = headers.headers.len()
