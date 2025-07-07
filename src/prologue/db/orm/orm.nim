@@ -213,7 +213,7 @@ proc initExampleORM*(): Future[ORM] {.async.} =
     port = 5432,
     database = "ex-orm",
     username = "postgres",
-    password = "azina681024",
+    password = "pas+123",
     maxConnections = 10,
     minConnections = 2
   )
