@@ -14,6 +14,7 @@ requires "nimcrypto >= 0.5.4"
 requires "cookiejar >= 0.2.0"
 requires "httpx >= 0.3.7"
 requires "logue >= 0.2.0"
+requires "db_connector >= 0.1.0"  # PostgreSQL ORM support
 
 
 # tests
@@ -77,3 +78,9 @@ task twebsocketchat, "Test WebSocket chat":
 task tnewexamples, "Test new examples":
   exec "nimble tjwt"
   exec "nimble twebsocketchat"
+
+task tpostgresorm, "Test PostgreSQL ORM example":
+  exec "nim c -r -d:release examples/postgresql_orm/app.nim"
+
+task tpostgresbasic, "Test basic PostgreSQL connection":
+  exec "nim c -r examples/postgresql_orm/basic_test.nim"

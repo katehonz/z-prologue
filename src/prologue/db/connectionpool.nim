@@ -101,35 +101,51 @@ proc newConnectionPool*(
   logging.info("Connection pool created with " & $minConnections & " initial connections")
 
 proc getConnection*(pool: ConnectionPool): Future[DbConn] {.async.} =
-  ## Получава връзка от пула
-  acquire(pool.lock)
-  defer: release(pool.lock)
+  ## Получава връзка от пула с proper async handling
+  var attempts = 0
+  const maxAttempts = 10
+  const retryDelayMs = 100
   
-  try:
-    # Търсене на налична връзка
-    if pool.availableConnections > 0:
-      for i, conn in pool.connections:
-        if not conn.inUse and conn.isValid():
-          conn.inUse = true
-          conn.lastUsed = getTime().toUnix()
-          dec(pool.availableConnections)
-          logging.debug("Reusing connection ID: " & $conn.id)
-          return conn
+  while attempts < maxAttempts:
+    acquire(pool.lock)
     
-    # Създаване на нова връзка ако има място
-    if pool.connections.len < pool.maxConnections:
-      let conn = newDbConn(pool.connectionString)
-      conn.inUse = true
-      pool.connections.add(conn)
-      logging.debug("Created new connection ID: " & $conn.id)
-      return conn
+    try:
+      # Търсене на налична връзка
+      if pool.availableConnections > 0:
+        for i, conn in pool.connections:
+          if not conn.inUse and conn.isValid():
+            conn.inUse = true
+            conn.lastUsed = getTime().toUnix()
+            dec(pool.availableConnections)
+            logging.debug("Reusing connection ID: " & $conn.id)
+            release(pool.lock)
+            return conn
+      
+      # Създаване на нова връзка ако има място
+      if pool.connections.len < pool.maxConnections:
+        let conn = newDbConn(pool.connectionString)
+        conn.inUse = true
+        pool.connections.add(conn)
+        logging.debug("Created new connection ID: " & $conn.id)
+        release(pool.lock)
+        return conn
+      
+      # Няма налични връзки - освобождаваме lock и изчакваме
+      release(pool.lock)
+      
+    except Exception as e:
+      release(pool.lock)
+      logging.error("Error getting connection from pool: " & e.msg)
+      raise
     
-    # Ако няма налични връзки, изчакваме
-    raise newException(ConnectionPoolError, "No available connections in pool")
-    
-  except Exception as e:
-    logging.error("Error getting connection from pool: " & e.msg)
-    raise
+    # Изчакваме малко преди следващия опит
+    inc(attempts)
+    if attempts < maxAttempts:
+      await sleepAsync(retryDelayMs)
+      logging.debug("Retrying connection acquisition, attempt: " & $attempts)
+  
+  # Ако не успеем да получим връзка след всички опити
+  raise newException(ConnectionPoolError, "No available connections in pool after " & $maxAttempts & " attempts")
 
 proc releaseConnection*(pool: ConnectionPool, conn: DbConn) {.async.} =
   ## Освобождава връзка обратно в пула
@@ -233,9 +249,9 @@ proc getConnectionPool*(app: Prologue): ConnectionPool =
   let poolPtr = parseInt(app.gScope.appData["connectionPool"])
   result = cast[ConnectionPool](poolPtr)
 
-proc withConnection*(ctx: Context, handler: proc(conn: DbConn): Future[void] {.async.}): Future[void] {.async.} =
+# Simplified connection helper - removed Context dependency for now
+proc withConnection*(pool: ConnectionPool, handler: proc(conn: DbConn): Future[void] {.async.}): Future[void] {.async.} =
   ## Изпълнява операция с връзка от пула
-  let pool = ctx.gScope.appData.getConnectionPool()
   let conn = await pool.getConnection()
   
   try:
