@@ -1,5 +1,61 @@
-# Static Files
+# Static Files and Pages in Prologue
 
+Prologue makes it easy to serve static files (CSS, JS, images) and provides built-in templates for common pages like errors and login.
+
+---
+
+## Main Concepts
+
+- **Static files:** Any files not processed dynamically (e.g., from a `static/` folder).
+- **Templated pages:** Built-in HTML templates for errors, login, internal messages.
+
+---
+
+## Example: Serving Static Files
+
+```nim
+import src/prologue/core/staticfiles
+
+let app = newApp()
+app.mountStatic("/static", "./static")
+app.run()
+```
+
+This makes all files in the `static/` folder available at the `/static` URL.
+
+---
+
+## Built-in Pages and Templates
+
+Prologue provides ready-to-use functions for generating HTML pages for 404, 500, login, and more:
+
+```nim
+import src/prologue/core/pages
+
+proc notFound(ctx: Context) {.async.} =
+  resp errorPage("Page not found!")
+
+proc login(ctx: Context) {.async.} =
+  resp loginPage()
+```
+
+---
+
+## Customization and Extending
+
+- You can create your own templates or override the built-in ones.
+- Use middleware to dynamically serve files or pages.
+
+---
+
+## Practical Tips
+
+- Store static resources in a dedicated folder (e.g., `static/`).
+- Use templates for a consistent look for error and login pages.
+
+---
+
+For more, see the `core/staticfiles.nim` and `core/pages.nim` modules or ask for specific examples!
 Prologue supports serving static files.
 
 ## Send static file Response

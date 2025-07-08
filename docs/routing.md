@@ -1,5 +1,78 @@
-# Routing
+# Routing in Prologue
 
+Prologue provides a powerful and flexible routing system, allowing you to easily define HTTP routes, group them, use dynamic parameters, and integrate with middleware.
+
+---
+
+## Main Concepts
+
+- **Route**: A path mapped to a specific HTTP handler.
+- **Handler**: A procedure that processes the request.
+- **HTTP Methods**: All standard methods supported (GET, POST, PUT, DELETE, PATCH, etc.).
+- **Route Groups**: Organize related routes together.
+- **Reversed Routes**: Generate URLs by route name.
+
+---
+
+## Example: Defining Routes
+
+```nim
+import src/prologue/core/application
+
+proc home(ctx: Context) {.async.} =
+  resp "<h1>Home</h1>"
+
+let app = newApp()
+app.addRoute("/", home, HttpGet)
+app.run()
+```
+
+---
+
+## Dynamic Parameters
+
+```nim
+proc helloName(ctx: Context) {.async.} =
+  let name = ctx.getPathParams("name", "Guest")
+  resp "<h1>Hello, " & name & "!</h1>"
+
+app.addRoute("/hello/{name}", helloName, HttpGet)
+```
+
+---
+
+## Route Grouping
+
+```nim
+let group = app.group("/api")
+group.get("/users", usersHandler)
+group.post("/users", createUserHandler)
+```
+
+---
+
+## Route Middleware
+
+You can add middleware to a specific route or group:
+
+```nim
+app.addRoute("/secure", secureHandler, HttpGet, middlewares = @[authMiddleware])
+```
+
+---
+
+## Reversed Routes
+
+Generate URLs by route name:
+
+```nim
+app.addRoute("/profile/{id}", profileHandler, HttpGet, name = "userProfile")
+let url = app.reverse("userProfile", {"id": "42"})
+```
+
+---
+
+For more details, see the `core/route.nim` module documentation or ask for a specific example!
 Routing is the core of web framework.
 
 ## Static Routing

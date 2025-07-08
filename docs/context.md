@@ -1,5 +1,74 @@
-# Context
+# Context in Prologue
 
+The Context object is central to request handling in Prologue. It encapsulates the entire state of an HTTP request and response, and is passed to every handler and middleware. Context allows you to access request data, manage response output, use session and flash storage, and control middleware flow.
+
+---
+
+## Main Concepts
+
+- **Context**: Represents the state for each HTTP request/response cycle.
+- **Handler**: Receives a `Context` object and processes the request.
+- **Middleware**: Functions that can inspect or modify the context before or after the main handler.
+- **Global Scope**: Application-wide data available in every context.
+
+---
+
+## Example: Using Context in a Handler
+
+```nim
+proc hello(ctx: Context) {.async.} =
+  let userAgent = ctx.request.headers["User-Agent"]
+  ctx.response.body = "<h1>Hello!</h1><p>Your browser: " & userAgent & "</p>"
+```
+
+---
+
+## Accessing Request and Response
+
+- `ctx.request`: Contains all request data (headers, params, body, etc.)
+- `ctx.response`: Used to set the response body, status, headers, etc.
+
+```nim
+proc info(ctx: Context) {.async.} =
+  let method = ctx.request.httpMethod
+  let path = ctx.request.url.path
+  resp "<b>Method:</b> " & $method & "<br><b>Path:</b> " & path
+```
+
+---
+
+## Middleware and Context
+
+Middleware procedures also receive the context and can read or modify it. Middleware can be global or per-route.
+
+```nim
+proc logMiddleware(ctx: Context) {.async.} =
+  echo "Request: ", ctx.request.url
+  await switch(ctx) # continue to next middleware/handler
+
+app.use(logMiddleware)
+```
+
+---
+
+## Sessions and Flash Messages
+
+Context provides access to session storage and flash messages for per-user state and notifications.
+
+```nim
+ctx.session["userId"] = "42"
+ctx.flash("Welcome!", category = Info)
+```
+
+---
+
+## Global Scope
+
+You can store application-wide data in the global scope, accessible via `ctx.gScope`.
+
+---
+
+For more, see the `core/context.nim` module documentation or ask for advanced examples!
 Context is initialized when a new request enters. You can get the information of the whole Context when you are writing handlers.
 
 You can use attributes of context such as `request`, `response`, `session` and so on.

@@ -1,5 +1,73 @@
-# Configuration
+# Configuration in Prologue
 
+Prologue offers a flexible and centralized configuration system, allowing you to control application settings via code, environment variables, and configuration files. This helps you adapt your app for development, testing, and production environments with ease.
+
+---
+
+## Main Concepts
+
+- **Settings**: Central object holding all configuration values.
+- **.env and Environment Variables**: Override config via environment for deployment flexibility.
+- **Config Files**: Support for INI, JSON, or custom formats.
+- **Runtime Options**: Adjust settings programmatically at startup.
+
+---
+
+## Example: Basic Configuration
+
+```nim
+import src/prologue/core/configure
+
+let settings = newSettings(appName = "MyApp", debug = true, port = 8080)
+let app = newApp(settings = settings)
+```
+
+---
+
+## Using .env and Environment Variables
+
+You can set environment variables to override defaults:
+
+```sh
+export PROLOGUE_debug=true
+export PROLOGUE_port=8080
+```
+
+Prologue reads these automatically if present.
+
+---
+
+## Config Files
+
+Prologue supports loading settings from INI/JSON files:
+
+```nim
+let settings = loadSettings("config.ini")
+let app = newApp(settings = settings)
+```
+
+---
+
+## Dynamic and Runtime Options
+
+You can adjust settings at runtime before starting the app:
+
+```nim
+settings["staticDir"] = "public"
+settings["customOption"] = "value"
+```
+
+---
+
+## Practical Tips
+
+- Use `.env` or environment variables for secrets and deployment-specific values.
+- Store reusable config in versioned config files.
+- Combine runtime, file, and environment config for maximum flexibility.
+
+---
+
+For more, see the `core/configure.nim` and `core/nativesettings.nim` module documentation or ask for advanced examples!
 When starting a project, you need to configure your application.
 
 ## Simple settings

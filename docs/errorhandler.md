@@ -1,5 +1,58 @@
-# Error Handler
+# Error Handling in Prologue
 
+Prologue provides a powerful and flexible error handling system, allowing you to define custom error handlers, custom error pages, and centralized error logging.
+
+---
+
+## Main Concepts
+
+- **Error Handler:** A procedure executed for a specific HTTP error (404, 500, etc.).
+- **Global Error Table:** Register handlers for different HTTP codes.
+- **Custom Pages:** Return HTML, JSON, or other responses on errors.
+
+---
+
+## Example: Custom Error Handler
+
+```nim
+proc custom404(ctx: Context) {.async.} =
+  resp "<h1>Page not found!</h1>", code = Http404
+
+app.registerErrorHandler(Http404, custom404)
+```
+
+---
+
+## Centralized Error Logging
+
+Use middleware to log all errors:
+
+```nim
+proc errorLogger(ctx: Context) {.async.} =
+  if ctx.response.code >= 400:
+    echo "Error: ", ctx.response.code, " - ", ctx.response.body
+  await switch(ctx)
+
+app.use(errorLogger)
+```
+
+---
+
+## Built-in Error Pages
+
+Prologue provides ready-made templates for 404 and 500 errors, which you can customize.
+
+---
+
+## Practical Tips
+
+- Register handlers for common HTTP codes (404, 401, 500, etc.).
+- Use logging for easy debugging in production.
+- Return different responses based on request type (HTML, JSON, text).
+
+---
+
+For more, see the `core/httpexception.nim` and `core/application.nim` modules or ask for specific examples!
 ## User-defined error pages
 
 When web application encounters some unexpected situations, it may send 404 response to the client.

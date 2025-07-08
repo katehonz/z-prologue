@@ -1,4 +1,61 @@
-# Middlewares
+# Middleware in Prologue
+
+Middleware in Prologue allows you to intercept, modify, or short-circuit the processing of HTTP requests and responses. Middleware can be global (applied to all requests) or attached to specific routes or groups. They are executed in the order they are registered.
+
+---
+
+## Main Concepts
+
+- **Middleware**: A function that receives a `Context` and can perform actions before or after the main handler.
+- **Chaining**: Middleware can call `await switch(ctx)` to pass control to the next middleware or handler.
+- **Global Middleware**: Registered with `app.use()` and applies to all routes.
+- **Route Middleware**: Attached to a specific route or group.
+
+---
+
+## Example: Global Middleware
+
+```nim
+proc logMiddleware(ctx: Context) {.async.} =
+  echo "Request: ", ctx.request.url
+  await switch(ctx) # Continue to next middleware or handler
+
+app.use(logMiddleware)
+```
+
+---
+
+## Example: Route Middleware
+
+```nim
+proc authMiddleware(ctx: Context) {.async.} =
+  if not ctx.session.hasKey("userId"):
+    resp "<h1>Unauthorized</h1>", code = Http401
+  else:
+    await switch(ctx)
+
+app.addRoute("/secure", secureHandler, HttpGet, middlewares = @[authMiddleware])
+```
+
+---
+
+## Middleware Chaining and Order
+
+- Middleware are executed in the order they are registered.
+- If a middleware does not call `await switch(ctx)`, the chain stops and the response is sent.
+- You can have both global and route-specific middleware.
+
+---
+
+## Practical Tips
+
+- Use middleware for logging, authentication, error handling, CORS, etc.
+- Middleware can modify the context, set response headers, or even generate the response directly.
+- Keep middleware focused and composable.
+
+---
+
+For more, see the `core/middlewaresbase.nim` module documentation or ask for advanced examples!
 
 ## Existing middlewares
 
