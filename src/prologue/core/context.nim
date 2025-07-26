@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import std/[mimetypes, md5, uri, strutils, critbits, 
+import std/[mimetypes, uri, strutils, critbits, 
             asyncfile, asyncdispatch,strtabs, tables, strformat, 
             os, times, options, parseutils, json]
+import checksums/md5
 
-import ./response, ./pages, ./basicregex, ./request, ./httpcore/httplogue
+import ./response, ./pages, ./request, ./httpcore/httplogue
+from ./basicregex import Regex
 import ./types
 from ./configure import parseValue
 from ./httpexception import AbortError, RouteError, DuplicatedRouteError

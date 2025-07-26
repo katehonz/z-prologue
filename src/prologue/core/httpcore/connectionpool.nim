@@ -21,7 +21,7 @@
 ## - Adaptive pool sizing
 ## - Connection lifecycle management
 
-import std/[asyncdispatch, times, tables, options, logging, strutils, algorithm, math]
+import std/[asyncdispatch, times, tables, options, logging, strutils, math]
 import std/locks
 import std/hashes
 import std/net

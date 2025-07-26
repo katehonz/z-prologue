@@ -1,5 +1,4 @@
 import std/[os, json, tables, strutils, parsecfg, streams, sequtils]
-import ../core/types
 
 type
   ConfigSource* = enum

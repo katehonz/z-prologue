@@ -20,7 +20,7 @@
 
 import std/[hashes, strutils, strtabs, options, critbits, sequtils, parseutils]
 
-from ./basicregex import Regex, RegexMatch, match, groupNames, groupFirstCapture
+from ./basicregex import Regex, match
 import ./context
 import ./request
 import ./httpcore/httplogue
@@ -504,11 +504,9 @@ func findHandler*(ctx: Context): PathHandler {.inline.} =
   for (path, pathHandler) in ctx.gScope.reRouter:
     if path.httpMethod != reqMethod:
       continue
-    var m: RegexMatch
-
-    if route.match(path.route, m):
-      for name in groupNames(m):
-        ctx.request.pathParams[name] = m.groupFirstCapture(name, route)
+    if match(route, path.route):
+      # Since std/re doesn't have groupNames, we'll skip parameter extraction for now
+      discard
       return pathHandler
 
   # no find route

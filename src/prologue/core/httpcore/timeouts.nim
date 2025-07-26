@@ -21,9 +21,8 @@
 ## - Timeout prediction based on historical data
 ## - Graceful degradation strategies
 
-import std/[asyncdispatch, times, tables, options, logging, strutils, math, algorithm]
+import std/[times, tables, math, logging, algorithm]
 import std/locks
-import std/stats
 
 type
   TimeoutType* = enum

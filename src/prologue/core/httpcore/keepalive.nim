@@ -20,7 +20,7 @@
 ## - Timeout optimizations with adaptive algorithms
 ## - Connection health monitoring and recovery
 
-import std/[asyncdispatch, times, tables, options, logging, strutils, sets]
+import std/[asyncdispatch, times, tables, options, logging, strutils]
 import std/locks
 import std/[hashes]
 import std/net

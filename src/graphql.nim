@@ -1,8 +1,6 @@
-import prologue, json, asyncdispatch, tables, times, strutils, sequtils
+import prologue, json, asyncdispatch, tables, times, strutils
 import prologue/core/context
-import prologue/middlewares/utils
-import prologue/db/bormin/models
-import std/[options, logging, base64, random]
+import std/[options, base64]
 
 # GraphQL модул за z-prologue с подобрена функционалност
 # Поддържа интеграция с ORM, мутации, пагинация и абонаменти
@@ -476,9 +474,9 @@ proc resolveAccount*(ctx: GraphQLContext, args: JsonNode): Future[JsonNode] {.as
 proc resolveAccounts*(ctx: GraphQLContext, args: JsonNode): Future[JsonNode] {.async.} =
   ## Резолвър за списък със сметки с пагинация
   try:
-    let first = args{"first"}.getInt(10)
-    let after = args{"after"}.getStr("")
-    let accountType = if args.hasKey("accountType"): some(args{"accountType"}.getStr) else: none(string)
+    discard args{"first"}.getInt(10)
+    discard args{"after"}.getStr("")
+    discard if args.hasKey("accountType"): some(args{"accountType"}.getStr) else: none(string)
     
     # Симулация на данни
     var accounts = newJArray()
@@ -669,7 +667,6 @@ proc resolveTrialBalance*(ctx: GraphQLContext, args: JsonNode): Future[JsonNode]
     raise newException(ValueError, "Failed to generate trial balance: " & e.msg)
 
 # Rate limiting за защита от сложни заявки
-var queryComplexityCache = initTable[string, int]()
 const MAX_QUERY_COMPLEXITY = 100
 
 proc calculateQueryComplexity*(query: string): int =
@@ -742,7 +739,7 @@ proc accountingGraphqlHandler*(ctx: Context) {.async.} =
       
       let jsonBody = parseJson(body)
       let query = jsonBody{"query"}.getStr
-      let variables = jsonBody{"variables"}
+      discard jsonBody{"variables"}
       
       if query.len == 0:
         ctx.response.code = Http400
@@ -847,6 +844,11 @@ proc accountingGraphqlCorsMiddleware*(): HandlerAsync =
       ctx.response.body = ""
     else:
       await switch(ctx)
+
+# Основен GraphQL handler (експорт за main.nim)
+proc graphqlHandler*(ctx: Context) {.async.} =
+  ## Основен GraphQL handler който се използва в main.nim
+  await accountingGraphqlHandler(ctx)
 
 # GraphQL Playground за разработка
 proc accountingGraphqlPlaygroundHandler*(ctx: Context) {.async.} =

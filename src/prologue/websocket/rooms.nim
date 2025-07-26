@@ -73,7 +73,7 @@ proc addClient*(server: WebSocketServer, client: WebSocketClient) =
 proc removeClient*(server: WebSocketServer, clientId: string) =
   ## Удаляет клиента с сервера и из всех комнат
   if server.clients.hasKey(clientId):
-    let client = server.clients[clientId]
+    discard server.clients[clientId]
     
     # Удаляем клиента из всех комнат
     for roomName, room in server.rooms.pairs:

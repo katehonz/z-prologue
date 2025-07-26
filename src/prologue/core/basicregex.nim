@@ -1,4 +1,4 @@
-import pkg/regex
+import std/re
 
 
-export re, Regex, RegexMatch, match, groupNames, groupFirstCapture
+export Regex, match, find, findBounds, findAll
