@@ -21,6 +21,8 @@ import ./db/connectionpool
 import ./cache/cache
 import ./performance/lazyloading
 import ./routing/optimized
+import std/[times, sequtils, strutils, logging, asyncdispatch]
+import prologue
 
 export connectionpool
 export cache
@@ -60,6 +62,9 @@ type
 
 var globalPerformanceMetrics = PerformanceMetrics()
 
+# Forward declaration
+proc performanceMonitoringMiddleware*(): prologue.HandlerAsync
+
 proc defaultPerformanceConfig*(): PerformanceConfig =
   ## Returns default performance configuration
   result = PerformanceConfig(
@@ -73,7 +78,7 @@ proc defaultPerformanceConfig*(): PerformanceConfig =
     enableMetrics: true
   )
 
-proc initPerformanceOptimizations*(app: Prologue, config: PerformanceConfig = defaultPerformanceConfig()) =
+proc initPerformanceOptimizations*(app: var prologue.Prologue, config: PerformanceConfig = defaultPerformanceConfig()) =
   ## Initializes all performance optimizations for a Prologue application
   logging.info("Initializing performance optimizations...")
   
@@ -88,7 +93,7 @@ proc initPerformanceOptimizations*(app: Prologue, config: PerformanceConfig = de
     app.gScope.appData["performanceCache"] = $cast[int](memoryCache)
     
     # Add cache middleware
-    app.use(cacheMiddleware(memoryCache, config.cacheTTL))
+    use(app, cacheMiddleware(memoryCache, config.cacheTTL, nil))
     logging.info("Caching optimization enabled with size: " & $config.cacheSize)
   
   # Optimized Routing
@@ -98,12 +103,12 @@ proc initPerformanceOptimizations*(app: Prologue, config: PerformanceConfig = de
   
   # Performance monitoring middleware
   if config.enableMetrics:
-    app.use(performanceMonitoringMiddleware())
+    use(app, performanceMonitoringMiddleware())
     logging.info("Performance metrics enabled")
   
   logging.info("Performance optimizations initialized successfully")
 
-proc performanceMonitoringMiddleware*(): HandlerAsync =
+proc performanceMonitoringMiddleware*(): prologue.HandlerAsync =
   ## Creates middleware for monitoring performance metrics
   result = proc(ctx: Context) {.async.} =
     let startTime = cpuTime()
@@ -168,7 +173,7 @@ proc optimizedDatabaseQuery*[T](ctx: Context, query: string,
   )
 
 # Performance testing utilities
-proc benchmarkRoute*(app: Prologue, path: string, iterations = 1000): Future[tuple[avgTime: float, minTime: float, maxTime: float]] {.async.} =
+proc benchmarkRoute*(app: prologue.Prologue, path: string, iterations = 1000): Future[tuple[avgTime: float, minTime: float, maxTime: float]] {.async.} =
   ## Benchmarks a specific route
   var times: seq[float] = @[]
   

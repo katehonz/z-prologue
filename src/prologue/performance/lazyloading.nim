@@ -17,7 +17,7 @@
 ## This module provides lazy loading capabilities that defer resource initialization
 ## until they are actually needed, improving application startup time and memory usage.
 
-import std/[asyncdispatch, options, times, logging, tables]
+import std/[asyncdispatch, options, times, logging, tables, strutils]
 import std/locks
 
 type
@@ -143,7 +143,7 @@ proc registerResource*[T](manager: LazyResourceManager, name: string, resource: 
   manager.resources[name] = cast[pointer](resource)
   logging.debug("Registered lazy resource: " & name)
 
-proc getResource*[T](manager: LazyResourceManager, name: string, T: typedesc): LazyResource[T] =
+proc getResource*[T](manager: LazyResourceManager, name: string, typ: typedesc): LazyResource[T] =
   ## Gets a registered lazy resource by name
   acquire(manager.lock)
   defer: release(manager.lock)
@@ -167,7 +167,7 @@ proc registerGlobalResource*[T](name: string, resource: LazyResource[T]) =
   ## Registers a resource with the global manager
   globalLazyManager.registerResource(name, resource)
 
-proc getGlobalResource*[T](name: string, T: typedesc): LazyResource[T] =
+proc getGlobalResource*[T](name: string, typ: typedesc): LazyResource[T] =
   ## Gets a resource from the global manager
   result = globalLazyManager.getResource(name, T)
 
@@ -205,11 +205,11 @@ proc newLazyConfigLoader*(configPath: string): LazyResource[Table[string, string
       raise
   )
 
-proc newLazyDatabaseLoader*[T](connectionString: string, 
+proc newLazyDatabaseLoader*[A](connectionString: string, 
                               query: string,
-                              parser: proc(data: string): T): LazyResource[T] =
+                              parser: proc(data: string): A): LazyResource[A] =
   ## Creates a lazy loader for database data
-  result = newLazyResource(proc(): Future[T] {.async.} =
+  result = newLazyResource(proc(): Future[A] {.async.} =
     logging.debug("Loading database data with query: " & query)
     
     # В реална имплементация тук би се изпълнила заявката към базата данни
@@ -228,7 +228,7 @@ proc setLazyResource*[T](ctx: Context, name: string, resource: LazyResource[T]) 
   ## Sets a lazy resource in the context
   ctx.ctxData[name] = $cast[int](resource)
 
-proc getLazyResource*[T](ctx: Context, name: string, T: typedesc): LazyResource[T] =
+proc getLazyResource*[T](ctx: Context, name: string, typ: typedesc): LazyResource[T] =
   ## Gets a lazy resource from the context
   if not ctx.ctxData.hasKey(name):
     raise newException(LazyResourceError, "Lazy resource not found in context: " & name)
@@ -244,7 +244,7 @@ proc lazyResourceMiddleware*(resources: openArray[(string, pointer)]): HandlerAs
     for (name, resourcePtr) in resources:
       ctx.ctxData[name] = $cast[int](resourcePtr)
     
-    await ctx.next()
+    await switch(ctx)
 
 # Utility macros and templates
 template withLazyResource*[T](resource: LazyResource[T], body: untyped): untyped =

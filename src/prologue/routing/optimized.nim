@@ -22,6 +22,7 @@ import std/[tables, strutils, options, logging, times]
 import ../core/types
 import ../core/middlewaresbase
 import ../core/httpcore/httplogue
+import ../core/application
 
 type
   RouteNode* = ref object
@@ -332,7 +333,7 @@ proc routePerformanceMiddleware*(): HandlerAsync =
   result = proc(ctx: Context) {.async.} =
     let startTime = cpuTime()
     
-    await ctx.next()
+    await switch(ctx)
     
     let duration = (cpuTime() - startTime) * 1000.0
     ctx.response.setHeader("X-Route-Time", $duration & "ms")

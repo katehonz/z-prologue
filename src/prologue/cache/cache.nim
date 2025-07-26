@@ -19,6 +19,7 @@
 
 import std/[asyncdispatch, times, tables, options, json, strutils, logging, hashes]
 import std/locks
+import ../core/context
 
 type
   CacheKey* = string
@@ -73,10 +74,10 @@ type
   CacheError* = object of CatchableError
 
 # Base cache methods (virtual)
-method get*(cache: CacheBackend, key: CacheKey): Future[Option[CacheValue]] {.async, base.} =
+method get*(cache: CacheBackend, key: CacheKey): Future[Option[CacheValue]] {.async, base, gcsafe.} =
   raise newException(CacheError, "get method not implemented")
 
-method set*(cache: CacheBackend, key: CacheKey, value: CacheValue, ttl: CacheTTL = 0): Future[bool] {.async, base.} =
+method set*(cache: CacheBackend, key: CacheKey, value: CacheValue, ttl: CacheTTL = 0): Future[bool] {.async, base, gcsafe.} =
   raise newException(CacheError, "set method not implemented")
 
 method delete*(cache: CacheBackend, key: CacheKey): Future[bool] {.async, base.} =
@@ -303,9 +304,9 @@ import ../core/application
 import ../core/middlewaresbase
 
 proc cacheMiddleware*(backend: CacheBackend, ttl: CacheTTL = 300,
-                     keyGenerator: proc(ctx: Context): string = nil): HandlerAsync =
+                     keyGenerator: proc(ctx: Context): string {.gcsafe.} = nil): HandlerAsync =
   ## Creates a cache middleware for Prologue
-  result = proc(ctx: Context) {.async.} =
+  result = proc(ctx: Context) {.async, gcsafe.} =
     # Only cache GET requests by default
     if ctx.request.reqMethod == HttpGet:
       let cacheKey = if keyGenerator != nil:

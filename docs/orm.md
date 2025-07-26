@@ -58,6 +58,26 @@ echo orm.conn.fastRows("SELECT * FROM User")
 - Use `orm.conn.fastRows()` for query results.
 - Extend with your own query helpers as needed.
 
+### Bulk Insert
+The `saveBulk` method allows you to insert multiple records with a single database query, significantly improving performance for batch operations.
+
+Example usage:
+```nim
+var users = @[]
+for i in 1..1000:
+  users.add(User(username: "user$i", email: "user$i@example.com"))
+await users.saveBulk()
+```
+
+### Pagination
+The `paginate` method provides efficient way to retrieve paginated results from large datasets.
+
+Example usage:
+```nim
+# Get 2nd page with 25 records per page
+let users = await User.paginate(2, 25)
+```
+
 ## Migrations
 - Define and run migrations using the `migrations.nim` module.
 - Supports schema evolution and versioning.

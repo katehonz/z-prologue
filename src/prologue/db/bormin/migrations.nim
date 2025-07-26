@@ -2,7 +2,7 @@
 ## Migration support module
 
 import os, strutils, times, json, parsesql, streams, sequtils, algorithm
-import bormin/models
+import models
 
 type
   Migration* = object
@@ -49,12 +49,22 @@ proc createMigration*(mm: MigrationManager, name: string): string =
   
   let templateContent = """-- Migration: $1
 -- Created at: $2
-
--- Write your UP migration here
-
+-- 
+-- INSTRUCTIONS:
+-- 1. Uncomment and modify the SQL statements below
+-- 2. UP section contains SQL for applying the migration
+-- 3. DOWN section contains SQL for rolling back the migration
+-- 4. Keep the '-- @DOWN' marker to separate UP and DOWN sections
+-- 
+-- EXAMPLE (uncomment and modify):
+-- 
+-- UP: Add bio column to users table
+ALTER TABLE users ADD COLUMN bio TEXT;
+-- 
 -- @DOWN
-
--- Write your DOWN migration here
+-- 
+-- DOWN: Remove bio column from users table
+ALTER TABLE users DROP COLUMN bio;
 """ % [name, now().format("yyyy-MM-dd HH:mm:ss")]
 
   writeFile(filepath, templateContent)

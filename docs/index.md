@@ -116,7 +116,10 @@ Run **app.nim** (`nim c -r app.nim`). Now the server is running at `localhost:80
 
 ### Extensions
 
-If you need more extensions, you can refer to [awesome prologue](https://github.com/planety/awesome-prologue) and [awesome nim](https://github.com/ringabout/awesome-nim#web).
+Prologue provides built-in support for:
+- [GraphQL](graphql.md) - Modern API query language with pagination, authentication, and playground
+- [Accounting Enhancements](accounting-enhancements.md) - Financial data types, ACID transactions, and specialized GraphQL API for accounting systems
+- Additional extensions available at [awesome prologue](https://github.com/planety/awesome-prologue) and [awesome nim](https://github.com/ringabout/awesome-nim#web)
 
 ## Donations
 
