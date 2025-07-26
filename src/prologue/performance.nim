@@ -21,8 +21,7 @@ import ./db/connectionpool
 import ./cache/cache
 import ./performance/lazyloading
 import ./routing/optimized
-import std/[times, sequtils, strutils, logging, asyncdispatch]
-import prologue
+import std/[times, sequtils, strutils, logging, asyncdispatch, math]
 
 export connectionpool
 export cache
@@ -36,9 +35,9 @@ export newInMemoryCache, newRedisCache, newMultiLevelCache, cacheMiddleware
 export LazyResource, newLazyResource
 export TrieRouter, newTrieRouter, addRoute, findRoute
 
-import ./core/application
 import ./core/context
-import std/[logging, asyncdispatch]
+import ./core/middlewaresbase
+import ./core/application
 
 type
   PerformanceConfig* = object
@@ -63,7 +62,7 @@ type
 var globalPerformanceMetrics = PerformanceMetrics()
 
 # Forward declaration
-proc performanceMonitoringMiddleware*(): prologue.HandlerAsync
+proc performanceMonitoringMiddleware*(): HandlerAsync
 
 proc defaultPerformanceConfig*(): PerformanceConfig =
   ## Returns default performance configuration
@@ -78,7 +77,7 @@ proc defaultPerformanceConfig*(): PerformanceConfig =
     enableMetrics: true
   )
 
-proc initPerformanceOptimizations*(app: var prologue.Prologue, config: PerformanceConfig = defaultPerformanceConfig()) =
+proc initPerformanceOptimizations*(app: var Prologue, config: PerformanceConfig = defaultPerformanceConfig()) =
   ## Initializes all performance optimizations for a Prologue application
   logging.info("Initializing performance optimizations...")
   
@@ -108,14 +107,14 @@ proc initPerformanceOptimizations*(app: var prologue.Prologue, config: Performan
   
   logging.info("Performance optimizations initialized successfully")
 
-proc performanceMonitoringMiddleware*(): prologue.HandlerAsync =
+proc performanceMonitoringMiddleware*(): HandlerAsync =
   ## Creates middleware for monitoring performance metrics
   result = proc(ctx: Context) {.async.} =
     let startTime = cpuTime()
     
     inc(globalPerformanceMetrics.requestCount)
     
-    await ctx.next()
+    await switch(ctx)
     
     let duration = (cpuTime() - startTime) * 1000.0
     
@@ -125,8 +124,8 @@ proc performanceMonitoringMiddleware*(): prologue.HandlerAsync =
       globalPerformanceMetrics.requestCount.float
     
     # Add performance headers
-    ctx.response.setHeader("X-Response-Time", $duration & "ms")
-    ctx.response.setHeader("X-Request-Count", $globalPerformanceMetrics.requestCount)
+    ctx.response.headers["X-Response-Time"] = $duration & "ms"
+    ctx.response.headers["X-Request-Count"] = $globalPerformanceMetrics.requestCount
 
 proc getPerformanceMetrics*(): PerformanceMetrics =
   ## Gets global performance metrics
@@ -173,7 +172,7 @@ proc optimizedDatabaseQuery*[T](ctx: Context, query: string,
   )
 
 # Performance testing utilities
-proc benchmarkRoute*(app: prologue.Prologue, path: string, iterations = 1000): Future[tuple[avgTime: float, minTime: float, maxTime: float]] {.async.} =
+proc benchmarkRoute*(app: Prologue, path: string, iterations = 1000): Future[tuple[avgTime: float, minTime: float, maxTime: float]] {.async.} =
   ## Benchmarks a specific route
   var times: seq[float] = @[]
   
@@ -231,9 +230,9 @@ proc performanceHealthCheck*(app: Prologue): Future[bool] {.async.} =
   result = true
   
   # Check cache
-  if app.appData.hasKey("performanceCache"):
+  if app.gScope.appData.hasKey("performanceCache"):
     try:
-      let cachePtr = parseInt(app.appData["performanceCache"])
+      let cachePtr = parseInt(app.gScope.appData["performanceCache"])
       let cache = cast[InMemoryCache](cachePtr)
       discard await cache.set("health_check", "ok", 1)
       let value = await cache.get("health_check")

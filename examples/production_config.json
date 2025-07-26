@@ -1,0 +1,49 @@
+{
+  "app_name": "Z-Prologue Production App",
+  "debug": false,
+  "port": 8080,
+  "secret_key": "your-secret-key-here",
+  "buffer_size": 40960,
+  "reuse_port": true,
+  
+  "log_format": "json",
+  "log_output": "both",
+  "log_level": "info",
+  "log_file": "logs/app.log",
+  "log_async": true,
+  "log_skip_paths": ["/health", "/health/live", "/health/ready", "/metrics"],
+  
+  "rate_limit_max": 100,
+  "rate_limit_window": 60.0,
+  "rate_limit_strategy": "sliding",
+  
+  "compression_min_size": 1024,
+  "compression_level": 6,
+  
+  "security_hsts": true,
+  "security_csp": "",
+  "security_x_frame": "DENY",
+  
+  "shutdown_timeout": 30.0,
+  
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "app_db",
+    "pool_size": 10,
+    "timeout": 5000
+  },
+  
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "db": 0,
+    "pool_size": 5
+  },
+  
+  "monitoring": {
+    "enabled": true,
+    "metrics_path": "/metrics",
+    "health_path": "/health"
+  }
+}
